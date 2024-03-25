@@ -29,6 +29,8 @@ def get_proxy_url() -> str:
 
 def switch_proxy(group_name: str, proxy_name: str):
     res = request(method="PUT", url=f"/proxies/{group_name}", data={'name': f"{proxy_name}"})
+    if res.status_code != 204:
+        raise Exception("切换 clash 配置失败")
     print()
 
 
