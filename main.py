@@ -1,15 +1,14 @@
 import argparse
 import datetime
+import logging
 import os
-import sys
 import time
+from logging import handlers
 
 import yaml
 
 from clash import api, test
 from configruation import get_config
-import logging
-from logging import handlers
 
 
 class Logger(object):
@@ -80,6 +79,8 @@ if __name__ == '__main__':
     for proxies_name in proxies_names:
         start_time = time.time()
         result = test.test_download()
+        if result:
+            result = test.test_google()
         end_time = time.time()
         execution_time = end_time - start_time
         if not result or execution_time > get_config().timeout:

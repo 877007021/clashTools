@@ -13,3 +13,14 @@ def test_download():
         return True
     except:
         return False
+
+
+# noinspection PyBroadException
+def test_google():
+    try:
+        test_url = f"https://www.google.com"
+        proxies = {"http": get_config().proxy_url, "https": get_config().proxy_url}
+        res = requests.get(test_url, timeout=(3, get_config().timeout), proxies=proxies)
+        return res.status_code == 200
+    except:
+        return False
