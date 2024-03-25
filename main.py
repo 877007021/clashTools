@@ -1,7 +1,9 @@
+import argparse
 import os
+
 import yaml
 from loguru import logger
-import argparse
+
 from clash import api, test
 from configruation import get_config
 
