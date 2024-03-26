@@ -2,6 +2,7 @@ import argparse
 import datetime
 import logging
 import os
+import sys
 import time
 from logging import handlers
 
@@ -83,7 +84,6 @@ def run():
     if len(proxies_names) <= 0:
         log.logger.error(f"获取 [{get_config().group_name}] 下的节点信息失败，退出检查")
         return
-    log.logger.info(f"获取节点成功，当前节点信息: {proxies_names}")
     if get_config().proxy_url is None:
         get_config().proxy_url = api.get_proxy_url()
     log.logger.info("开始检查代理是否有效")
@@ -96,13 +96,16 @@ def run():
             return result
 
         try:
+            start_time = time.time()
             result = exec_test()
+            end_time = time.time()
+            execution_time = end_time - start_time
         except:
             result = False
-
-        if not result:
+            execution_time = sys.maxsize
+        if not result or execution_time > get_config().timeout:
             api.switch_proxy(get_config().group_name, proxies_name)
-            log.logger.warning(f"当前代理测试失败，切换代理[{get_config().group_name} -> {proxies_name}]")
+            log.logger.warning(f"当前代理测试失败，测试时长：{execution_time}秒, 切换代理[{get_config().group_name} -> {proxies_name}]")
             time.sleep(1)
         else:
             log.logger.info("当前代理测试成功")
