@@ -1,0 +1,16 @@
+services:
+  clash-tools:
+    build: .
+    restart: always
+    container_name: clash-tools
+    image: clash-tools:latest
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    environment:
+      - base_url=http://host.docker.internal:55327
+      - secret=83fe3c0d-7652-46f5-9f15-xxxx
+      - timeout=10
+      - proxy_url=http://host.docker.internal:7890
+      - group_name=\ud83d\ude80\u0020\u624b\u52a8\u5207\u6362
+      - max_size=10485760
+      - scheduler_time=15

@@ -6,6 +6,8 @@ import time
 from logging import handlers
 
 import yaml
+from apscheduler.schedulers.background import BackgroundScheduler
+from func_timeout import func_set_timeout
 
 from clash import api, test
 from configruation import get_config
@@ -50,6 +52,18 @@ def get_user_config():
 
 # noinspection HttpUrlsUsage
 def init_config():
+    parser = argparse.ArgumentParser(description='clash tools')
+    parser.add_argument('--base_url', help='clash api 地址')
+    parser.add_argument('--secret', help='clash api 认证')
+    parser.add_argument('--proxy_url', help='clash 代理地址')
+    parser.add_argument('--group_name', help='clash 代理分组名称')
+    parser.add_argument('--timeout', help='节点测试超时时间')
+    parser.add_argument('--max_size', help='节点测试下载文件大小')
+    parser.add_argument('--scheduler_time', help='定时任务间隔时间')
+    get_config().set_args(parser.parse_args())
+    if get_config().base_url and get_config().secret and get_config().proxy_url:
+        return
+    get_config().set_args_of_env()
     if get_config().base_url and get_config().secret and get_config().proxy_url:
         return
     clash_config = get_user_config()
@@ -61,32 +75,45 @@ def init_config():
         get_config().group_name = "🚀 手动切换"
 
 
-# 按装订区域中的绿色按钮以运行脚本。
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='clash tools')
-    parser.add_argument('--base_url', help='clash api 地址')
-    parser.add_argument('--secret', help='clash api 认证')
-    parser.add_argument('--proxy_url', help='clash 代理地址')
-    parser.add_argument('--group_name', help='clash 代理分组名称')
-    parser.add_argument('--timeout', help='节点测试超时时间')
-    parser.add_argument('--max_size', help='节点测试下载文件大小')
-    get_config().set_args(parser.parse_args())
-    init_config()
+# noinspection PyBroadException
+def run():
     proxies_names = api.get_proxies_names(get_config().group_name)
+    if len(proxies_names) <= 0:
+        log.logger.error(f"获取 [{get_config().group_name}] 下的节点信息失败，退出检查")
+        return
+    log.logger.info(f"获取节点成功，当前节点信息: {proxies_names}")
     if get_config().proxy_url is None:
         get_config().proxy_url = api.get_proxy_url()
     log.logger.info("开始检查代理是否有效")
     for proxies_name in proxies_names:
-        start_time = time.time()
-        result = test.test_download()
-        if result:
-            result = test.test_google()
-        end_time = time.time()
-        execution_time = end_time - start_time
-        if not result or execution_time > get_config().timeout:
+        @func_set_timeout(get_config().timeout)
+        def exec_test():
+            result = test.test_download()
+            if result:
+                result = test.test_google()
+            return result
+
+        try:
+            result = exec_test()
+        except:
+            result = False
+
+        if not result:
             api.switch_proxy(get_config().group_name, proxies_name)
             log.logger.warning(f"当前代理测试失败，切换代理[{get_config().group_name} -> {proxies_name}]")
             time.sleep(1)
         else:
             log.logger.info("当前代理测试成功")
             break
+
+
+# 按装订区域中的绿色按钮以运行脚本。
+if __name__ == '__main__':
+    init_config()
+    scheduler = BackgroundScheduler(timezone="Asia/Shanghai")
+    scheduler.add_job(run, "interval", minutes=get_config().timeout, coalesce=True, max_instances=1)
+    scheduler.start()
+    log.logger.info(f"添加定时任务成功，每{get_config().scheduler_time}分钟检查一次")
+    run()
+    while not time.sleep(5):
+        pass

@@ -1,4 +1,5 @@
 import json
+import os
 
 _instance = None
 
@@ -13,6 +14,7 @@ class Config:
         self.args = None
         self.group_name = None
         self.max_size = 10485760
+        self.scheduler_time = 15
 
     def set_args(self, args):
         self.args = args
@@ -35,6 +37,30 @@ class Config:
 
         if hasattr(args, "max_size") and args.max_size:
             self.max_size = int(args.max_size)
+        if hasattr(args, "scheduler_time") and args.scheduler_time:
+            self.scheduler_time = int(args.scheduler_time)
+
+    def set_args_of_env(self):
+        if os.environ.get("base_url", None):
+            if os.environ.get("base_url").startswith('http'):
+                self.base_url = os.environ.get("base_url")
+            else:
+                self.base_url = "http://" + os.environ.get("base_url")
+        if os.environ.get("secret", None):
+            self.secret = os.environ.get("secret")
+        if os.environ.get("timeout", None):
+            self.timeout = int(os.environ.get("timeout", 10))
+        if os.environ.get("proxy_url"):
+            if os.environ.get("proxy_url").startswith('http'):
+                self.proxy_url = os.environ.get("proxy_url")
+            else:
+                self.proxy_url = "http://" + os.environ.get("proxy_url")
+        if os.environ.get("group_name"):
+            self.group_name = json.loads('"%s"' % os.environ.get("group_name"))
+        if os.environ.get("max_size"):
+            self.max_size = int(os.environ.get("max_size", 10485760))
+        if os.environ.get("scheduler_time"):
+            self.scheduler_time = int(os.environ.get("scheduler_time"))
 
 
 def get_config():
