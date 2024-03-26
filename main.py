@@ -36,6 +36,8 @@ class Logger(object):
 
 current_date = datetime.datetime.now().strftime("%Y-%m-%d")
 
+if not os.path.exists("./logs"):
+    os.makedirs("./logs")
 log = Logger(f'./logs/{current_date}.log', level='debug')
 
 
