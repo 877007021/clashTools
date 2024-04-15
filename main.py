@@ -78,7 +78,7 @@ def init_config():
         get_config().group_name = "🚀 手动切换"
 
 
-# noinspection PyBroadException
+# noinspection PyBroadException,PyPackageRequirements
 def run():
     proxies_names = api.get_proxies_names(get_config().group_name)
     if len(proxies_names) <= 0:
@@ -87,38 +87,66 @@ def run():
     if get_config().proxy_url is None:
         get_config().proxy_url = api.get_proxy_url()
     log.logger.info("开始检查代理是否有效")
+    speed_dict = {}
+    handoff = False
     for proxies_name in proxies_names:
-        @func_set_timeout(get_config().timeout)
+
+        @func_set_timeout(get_config().timeout * 3)
         def exec_test():
-            result = test.test_download()
-            if result:
-                result = test.test_google()
-            return result
+            return test.test_download()
 
         try:
             start_time = time.time()
             result = exec_test()
             end_time = time.time()
             execution_time = end_time - start_time
+            speed_dict[proxies_name] = (get_config().max_size / 1024) / execution_time
+            if result:
+                result = test.test_google()
         except:
             result = False
             execution_time = sys.maxsize
         if not result or execution_time > get_config().timeout:
             api.switch_proxy(get_config().group_name, proxies_name)
             log.logger.warning(f"当前代理测试失败，测试时长：{execution_time}秒, 切换代理[{get_config().group_name} -> {proxies_name}]")
-            time.sleep(1)
         else:
-            log.logger.info("当前代理测试成功")
+            handoff = True
+            log.logger.info(f"当前代理代理测试成功，速度: [{calculation_speed(speed_dict[proxies_name])}]")
             break
+    if not handoff:
+        proxies_name = None
+        max_value = float('-inf')
+
+        for item in speed_dict:
+            for key, value in item.items():
+                if value > max_value:
+                    max_value = value
+                    proxies_name = key
+                    break
+        api.switch_proxy(get_config().group_name, proxies_name)
+        log.logger.warning(f"未能找到符合要求的节点，已切换为速度最快的节点: [{proxies_name}]，速度: [{calculation_speed(max_value)}]")
+
+
+def calculation_speed(source: float) -> str:
+    if not source:
+        return "0 KB/S"
+    if source <= 1024:
+        return f"{source:.2f} KB/S"
+    if source > 1024:
+        return f"{source / 1024 :.2f} MB/S"
+
+
+def init_scheduler():
+    scheduler = BackgroundScheduler(timezone="Asia/Shanghai")
+    scheduler.add_job(run, "interval", minutes=get_config().timeout, coalesce=True, max_instances=1)
+    scheduler.start()
+    log.logger.info(f"添加定时任务成功，每{get_config().scheduler_time}分钟检查一次")
 
 
 # 按装订区域中的绿色按钮以运行脚本。
 if __name__ == '__main__':
     init_config()
-    scheduler = BackgroundScheduler(timezone="Asia/Shanghai")
-    scheduler.add_job(run, "interval", minutes=get_config().timeout, coalesce=True, max_instances=1)
-    scheduler.start()
-    log.logger.info(f"添加定时任务成功，每{get_config().scheduler_time}分钟检查一次")
+    init_scheduler()
     run()
     while not time.sleep(5):
         pass
