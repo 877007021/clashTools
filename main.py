@@ -114,17 +114,13 @@ def run():
             log.logger.info(f"当前代理代理测试成功，速度: [{calculation_speed(speed_dict[proxies_name])}]")
             break
     if not handoff:
-        proxies_name = None
-        max_value = float('-inf')
-
-        for item in speed_dict:
-            for key, value in item.items():
-                if value > max_value:
-                    max_value = value
-                    proxies_name = key
-                    break
+        speed_tuple_list = sorted(speed_dict.items(), key=lambda x: x[1], reverse=True)
+        if len(speed_tuple_list) <= 0:
+            return
+        proxies_name, max_value = speed_tuple_list[0]
         api.switch_proxy(get_config().group_name, proxies_name)
         log.logger.warning(f"未能找到符合要求的节点，已切换为速度最快的节点: [{proxies_name}]，速度: [{calculation_speed(max_value)}]")
+        ssrToolsApi.update_download_stats(proxies_name)
 
 
 def calculation_speed(source: float) -> str:
