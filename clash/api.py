@@ -27,7 +27,7 @@ def get_proxies_names(group_name: str = None) -> list:
                     continue
                 proxies_dict[name] = history[-1]['delay']
             except:
-                pass
+                proxies_dict[name] = 9999
         proxies_tuple_list = sorted(proxies_dict.items(), key=lambda x: x[1])
         [proxies_names.append(name) for (name, delay) in proxies_tuple_list]
         return proxies_names
