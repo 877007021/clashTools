@@ -11,15 +11,28 @@ def proxies():
     return res.json()
 
 
-def get_proxies_names(group_name: str = None) -> set:
+def get_proxies_names(group_name: str = None) -> list:
     # noinspection PyBroadException
     try:
+        proxies_names = []
+        proxies_dict = {}
         proxies_properties = proxies()
         if group_name is None:
             group_name = "GLOBAL"
-        return set(proxies_properties['proxies'][group_name]['all'])
+        for name in proxies_properties['proxies'][group_name]['all']:
+            try:
+                history = proxies_properties['proxies'][name]['history']
+                if not history or len(history) <= 0:
+                    proxies_dict[name] = 9999
+                    continue
+                proxies_dict[name] = history[-1]['delay']
+            except:
+                pass
+        proxies_tuple_list = sorted(proxies_dict.items(), key=lambda x: x[1])
+        [proxies_names.append(name) for (name, delay) in proxies_tuple_list]
+        return proxies_names
     except:
-        return set()
+        return []
 
 
 def get_proxy_url() -> str:
