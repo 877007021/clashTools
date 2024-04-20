@@ -134,7 +134,7 @@ def calculation_speed(source: float) -> str:
 
 def init_scheduler():
     scheduler = BackgroundScheduler(timezone="Asia/Shanghai")
-    scheduler.add_job(run, "interval", minutes=get_config().timeout, coalesce=True, max_instances=1)
+    scheduler.add_job(run, "interval", minutes=get_config().scheduler_time, coalesce=True, max_instances=1)
     scheduler.start()
     log.logger.info(f"添加定时任务成功，每{get_config().scheduler_time}分钟检查一次")
 
